@@ -17,6 +17,44 @@ on:
   workflow_call:
 
 jobs:
+  notify-cicd-start:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send CI/CD start notification
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          THREAD_ID: ${{ secrets.MESSAGE_CICD_THREAD_ID }}
+        run: |
+          COMMIT_MSG=$(echo '${{ github.event.head_commit.message }}' | head -n 1)
+          if [ -z "$COMMIT_MSG" ]; then
+            COMMIT_MSG=$(echo '${{ toJSON(github.event.commits) }}' | python3 -c "import sys,json; commits=json.load(sys.stdin); print(commits[-1]['message'].split(chr(10))[0] if commits else '(no commit message)')" 2>/dev/null || echo "(no commit message)")
+          fi
+          COMMIT_MSG=$(echo "$COMMIT_MSG" | head -c 200)
+          BRANCH="${{ github.ref_name }}"
+          SENDER="${{ github.actor }}"
+          REPO="${{ github.repository }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          MSG="<b>🏗 CI/CD - Build Started</b>%0A%0A<b>Repo:</b> ${REPO}%0A<b>Branch:</b> ${BRANCH}%0A<b>Commit:</b> ${COMMIT_MSG}%0A<b>Author:</b> ${SENDER}%0A%0A<a href=\"${RUN_URL}\">View Workflow Run</a>"
+
+          THREAD_PARAM=""
+          if [ -n "$THREAD_ID" ]; then
+            THREAD_PARAM="&message_thread_id=${THREAD_ID}"
+          fi
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&parse_mode=HTML&disable_web_page_preview=true&text=${MSG}${THREAD_PARAM}")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "[+] CI/CD start notification sent"
+          else
+            echo "[-] Failed to send CI/CD start notification (HTTP $HTTP_CODE)"
+            echo "$RESPONSE" | head -n-1
+          fi
+
   generate-key:
     runs-on: ubuntu-latest
     outputs:
@@ -340,7 +378,7 @@ jobs:
 
   upload-telegram:
     needs: repack-manager
-    if: github.event_name != 'pull_request' 
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -364,12 +402,12 @@ jobs:
         run: |
           if [ "${{ matrix.manager_type }}" == "spoofed" ]; then
             echo "title=Spoofed-Manager" >> $GITHUB_OUTPUT
-            echo "topicid=${{ vars.MESSAGE_SPOOFED_THREAD_ID }}" >> $GITHUB_OUTPUT
+            echo "topicid=${{ secrets.MESSAGE_SPOOFED_THREAD_ID }}" >> $GITHUB_OUTPUT
           else
             echo "title=Manager" >> $GITHUB_OUTPUT
-            echo "topicid=${{ vars.MESSAGE_THREAD_ID }}" >> $GITHUB_OUTPUT
+            echo "topicid=${{ secrets.MESSAGE_THREAD_ID }}" >> $GITHUB_OUTPUT
           fi
-        
+
       - name: Download Debug artifact
         if: ${{ matrix.manager_type != 'spoofed' }}
         uses: actions/download-artifact@v8
@@ -386,7 +424,7 @@ jobs:
       - name: Upload to Telegram
         if: steps.need_upload.outputs.UPLOAD == 'true'
         env:
-          CHAT_ID: ${{ vars.CHAT_ID }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           MESSAGE_THREAD_ID: ${{ steps.determine.outputs.topicid }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -395,10 +433,71 @@ jobs:
         run: |
           pip3 install python-telegram-bot
           export VERSION=$(git rev-list --count HEAD)
-          if [ ! "${{ matrix.manager_type }}" == "spoofed" ]; then
+          if [ "${{ matrix.manager_type }}" != "spoofed" ]; then
             APK_DEBUG=apk/debug/*.apk
           else
             APK_DEBUG=""
           fi
           APK_RELEASE=apk/release/*.apk
           python3 $GITHUB_WORKSPACE/scripts/ksubot.py $APK_DEBUG $APK_RELEASE
+
+  notify-cicd-end:
+    if: always() && github.event_name == 'push'
+    needs: [repack-manager, build-ksud, build-manager, generate-key, build-lkm, build-ksuinit]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send CI/CD completion notification
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          THREAD_ID: ${{ secrets.MESSAGE_CICD_THREAD_ID }}
+        run: |
+          COMMIT_MSG=$(echo '${{ github.event.head_commit.message }}' | head -n 1)
+          if [ -z "$COMMIT_MSG" ]; then
+            COMMIT_MSG=$(echo '${{ toJSON(github.event.commits) }}' | python3 -c "import sys,json; commits=json.load(sys.stdin); print(commits[-1]['message'].split(chr(10))[0] if commits else '(no commit message)')" 2>/dev/null || echo "(no commit message)")
+          fi
+          COMMIT_MSG=$(echo "$COMMIT_MSG" | head -c 200)
+          BRANCH="${{ github.ref_name }}"
+          SENDER="${{ github.actor }}"
+          REPO="${{ github.repository }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          REPACK="${{ needs.repack-manager.result }}"
+          KSUD="${{ needs.build-ksud.result }}"
+          MANAGER="${{ needs.build-manager.result }}"
+          LKM="${{ needs.build-lkm.result }}"
+          KSUINIT="${{ needs.build-ksuinit.result }}"
+
+          if [ "$REPACK" = "success" ] && [ "$KSUD" = "success" ] && [ "$MANAGER" = "success" ] && [ "$LKM" = "success" ] && [ "$KSUINIT" = "success" ]; then
+            STATUS="✅ <b>SUCCESS</b>"
+          else
+            STATUS="❌ <b>FAILED</b>"
+            FAILED_JOBS=""
+            [ "$REPACK" != "success" ] && FAILED_JOBS="${FAILED_JOBS}  - repack-manager: ${REPACK}%0A"
+            [ "$KSUD" != "success" ] && FAILED_JOBS="${FAILED_JOBS}  - build-ksud: ${KSUD}%0A"
+            [ "$MANAGER" != "success" ] && FAILED_JOBS="${FAILED_JOBS}  - build-manager: ${MANAGER}%0A"
+            [ "$LKM" != "success" ] && FAILED_JOBS="${FAILED_JOBS}  - build-lkm: ${LKM}%0A"
+            [ "$KSUINIT" != "success" ] && FAILED_JOBS="${FAILED_JOBS}  - build-ksuinit: ${KSUINIT}%0A"
+          fi
+
+          if [ -n "$FAILED_JOBS" ]; then
+            MSG="<b>CI/CD - Build Completed</b>%0A%0A<b>Status:</b> ${STATUS}%0A<b>Repo:</b> ${REPO}%0A<b>Branch:</b> ${BRANCH}%0A<b>Commit:</b> ${COMMIT_MSG}%0A<b>Author:</b> ${SENDER}%0A%0A<b>Failed Jobs:</b>%0A${FAILED_JOBS}%0A<a href=\"${RUN_URL}\">View Workflow Run</a>"
+          else
+            MSG="<b>CI/CD - Build Completed</b>%0A%0A<b>Status:</b> ${STATUS}%0A<b>Repo:</b> ${REPO}%0A<b>Branch:</b> ${BRANCH}%0A<b>Commit:</b> ${COMMIT_MSG}%0A<b>Author:</b> ${SENDER}%0A%0A<a href=\"${RUN_URL}\">View Workflow Run</a>"
+          fi
+
+          THREAD_PARAM=""
+          if [ -n "$THREAD_ID" ]; then
+            THREAD_PARAM="&message_thread_id=${THREAD_ID}"
+          fi
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&parse_mode=HTML&disable_web_page_preview=true&text=${MSG}${THREAD_PARAM}")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "[+] CI/CD completion notification sent"
+          else
+            echo "[-] Failed to send CI/CD completion notification (HTTP $HTTP_CODE)"
+            echo "$RESPONSE" | head -n-1
+          fi
