@@ -121,7 +121,7 @@ comment "------------------------WARNING-------------------------------"
 comment "KittiSU will check EVERY hooks in kernel compile process"
 comment "If anything mismatch with document, Kernel compile maybe FAILED!"
 comment "See document if you face any compile failed due to hook check"
-comment "Document: https://github.com/anotheranhiutangerine/KittiSU"
+comment "Document: https://github.com/terebiko/KittiSU"
 comment "--------------------------------------------------------------"
 
 config KSU_MANUAL_HOOK_AUTO_SETUID_HOOK
