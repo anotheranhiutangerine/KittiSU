@@ -113,6 +113,8 @@ The APK will be at `manager/app/build/outputs/apk/release/`.
 <summary>ReSukiSU credit</summary>
 
 - [ReSukiSU/ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) — upstream fork base
+- [hzzmonetvn/ReSukiSU](https://github.com/hzzmonetvn/ReSukiSU) — i "stole" the hash codes of others KernelSU variant from here :)
+
 </details>
 
 <details>

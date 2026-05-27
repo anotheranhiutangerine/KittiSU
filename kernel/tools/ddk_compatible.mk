@@ -14,10 +14,6 @@ ifdef CONFIG_KSU_TOOLKIT_SUPPORT
 ccflags-y += -DCONFIG_KSU_TOOLKIT_SUPPORT
 endif
 
-ifdef CONFIG_KSU_MULTI_MANAGER_SUPPORT
-ccflags-y += -DCONFIG_KSU_MULTI_MANAGER_SUPPORT
-endif
-
 # ddk are only support Tracepoint Syscall Redirect hook
 ifdef CONFIG_KSU_TRACEPOINT_HOOK
 ccflags-y += -DCONFIG_KSU_TRACEPOINT_HOOK

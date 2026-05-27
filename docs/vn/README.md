@@ -107,6 +107,7 @@ APK sẽ nằm tại `manager/app/build/outputs/apk/release/`.
 <summary>Ghi công ReSukiSU</summary>
 
 - [ReSukiSU/ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) — Cơ sở fork upstream
+- [hzzmonetvn/ReSukiSU](https://github.com/hzzmonetvn/ReSukiSU) — Tôi đã "lấy trộm" mã hash của các biến thể KernelSU khác từ đây :)
 </details>
 
 <details>

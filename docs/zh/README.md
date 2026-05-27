@@ -107,6 +107,7 @@ APK 输出路径：`manager/app/build/outputs/apk/release/`
 <summary>ReSukiSU 鸣谢</summary>
 
 - [ReSukiSU/ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) — 上游分支基础
+- [hzzmonetvn/ReSukiSU](https://github.com/hzzmonetvn/ReSukiSU) — 我从这里“窃取”了其他 KernelSU 变体的哈希码 :)
 </details>
 
 <details>

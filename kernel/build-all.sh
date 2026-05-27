@@ -21,7 +21,6 @@ for kmi in $KMIS; do
         -e GIT_CONFIG_GLOBAL=/build/.tmp_gitconfig \
         -e CONFIG_KSU=m \
         -e CONFIG_KSU_TRACEPOINT_HOOK=y \
-        -e CONFIG_KSU_MULTI_MANAGER_SUPPORT=y \
         -- -C kernel; then
         cd kernel/
         if [ -f kernelsu.ko ]; then
