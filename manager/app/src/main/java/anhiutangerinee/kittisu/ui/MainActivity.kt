@@ -95,6 +95,7 @@ import anhiutangerinee.kittisu.ui.screen.InstallScreen
 import anhiutangerinee.kittisu.ui.screen.SulogScreen
 import anhiutangerinee.kittisu.ui.screen.TemplateEditorScreen
 import anhiutangerinee.kittisu.ui.screen.UmountManagerScreen
+import anhiutangerinee.kittisu.ui.screen.rezygisk.ReZygiskSettingsScreen
 import anhiutangerinee.kittisu.ui.screen.about.AboutScreen
 import anhiutangerinee.kittisu.ui.screen.about.OpenSourceLicenseScreen
 import anhiutangerinee.kittisu.ui.screen.moduleRepo.ModuleRepoScreen
@@ -575,6 +576,7 @@ class MainActivity : ComponentActivity() {
                                     entry<Route.MoreSettings> { MoreSettingsScreen() }
                                     entry<Route.SuSFSConfig> { SuSFSConfigScreen() }
                                     entry<Route.UmountManager> { UmountManagerScreen() }
+                                    entry<Route.ReZygiskSettings> { ReZygiskSettingsScreen() }
                                     entry<Route.KernelFlash> { key ->
                                         KernelFlashScreen(
                                             key.kernelUri,

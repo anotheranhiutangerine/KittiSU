@@ -27,7 +27,7 @@ import java.util.Properties
  */
 private const val TAG = "KsuCli"
 
-private fun getKsuDaemonPath(): String {
+fun getKsuDaemonPath(): String {
     return ksuApp.applicationInfo.nativeLibraryDir + File.separator + "libksud.so"
 }
 

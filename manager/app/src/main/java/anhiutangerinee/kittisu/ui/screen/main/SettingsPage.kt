@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Fence
 import androidx.compose.material.icons.filled.FolderOff
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Policy
 import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
@@ -119,6 +120,7 @@ import anhiutangerinee.kittisu.ui.util.execKsud
 import anhiutangerinee.kittisu.ui.util.getBugreportFile
 import anhiutangerinee.kittisu.ui.util.getFeaturePersistValue
 import anhiutangerinee.kittisu.ui.util.getFeatureStatus
+import anhiutangerinee.kittisu.ui.util.getRootShell
 import com.topjohnwu.superuser.ShellUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -472,6 +474,81 @@ fun SettingsPage(bottomPadding: Dp) {
                                         if (Natives.setDefaultUmountModules(it)) {
                                             umountChecked = it
                                         }
+                                    }
+                                )
+                            }
+
+                            item {
+                                var isReZygiskEnabled by rememberSaveable {
+                                    mutableStateOf(prefs.getBoolean("rezygisk_enabled", false))
+                                }
+                                var isReZygiskRunning by remember { mutableStateOf(false) }
+
+                                LaunchedEffect(isReZygiskEnabled) {
+                                    if (isReZygiskEnabled) {
+                                        withContext(Dispatchers.IO) {
+                                            val shell = getRootShell()
+                                            val state = anhiutangerinee.kittisu.rezygisk.getReZygiskState(shell)
+                                            isReZygiskRunning = state.monitorState == anhiutangerinee.kittisu.rezygisk.MonitorState.TRACING ||
+                                                state.monitorState == anhiutangerinee.kittisu.rezygisk.MonitorState.STOPPED
+                                        }
+                                    }
+                                }
+
+                                val runningSummary = when {
+                                    isReZygiskRunning -> stringResource(R.string.rezygisk_running)
+                                    isReZygiskEnabled -> stringResource(R.string.rezygisk_starting_up)
+                                    else -> stringResource(R.string.rezygisk_stopped)
+                                }
+
+                                SettingsSwitchWidget(
+                                    icon = Icons.Filled.Memory,
+                                    title = stringResource(R.string.rezygisk_title),
+                                    description = runningSummary,
+                                    checked = isReZygiskEnabled,
+                                    onCheckedChange = { enabled ->
+                                        scope.launch(Dispatchers.IO) {
+                                            val shell = getRootShell()
+                                            if (enabled) {
+                                                if (anhiutangerinee.kittisu.rezygisk.isReZygiskModuleInstalledOnDevice()) {
+                                                    anhiutangerinee.kittisu.rezygisk.disableReZygiskModule(shell)
+                                                }
+                                                val ok = anhiutangerinee.kittisu.rezygisk.deployReZygiskBinaries(shell) &&
+                                                    anhiutangerinee.kittisu.rezygisk.applyReZygiskSepolicy(shell) &&
+                                                    anhiutangerinee.kittisu.rezygisk.installReZygiskBootScript(shell) &&
+                                                    anhiutangerinee.kittisu.rezygisk.startReZygisk(shell)
+                                                if (ok) {
+                                                    prefs.edit { putBoolean("rezygisk_enabled", true) }
+                                                    withContext(Dispatchers.Main) {
+                                                        isReZygiskEnabled = true
+                                                        isReZygiskRunning = true
+                                                        snackBarHost.showSnackbar(stringResource(R.string.rezygisk_enable_success))
+                                                    }
+                                                } else {
+                                                    withContext(Dispatchers.Main) {
+                                                        snackBarHost.showSnackbar(stringResource(R.string.rezygisk_failed, "enable"))
+                                                    }
+                                                }
+                                            } else {
+                                                anhiutangerinee.kittisu.rezygisk.cleanupReZygisk(shell)
+                                                prefs.edit { putBoolean("rezygisk_enabled", false) }
+                                                withContext(Dispatchers.Main) {
+                                                    isReZygiskEnabled = false
+                                                    isReZygiskRunning = false
+                                                    snackBarHost.showSnackbar(stringResource(R.string.rezygisk_disable_success))
+                                                }
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+
+                            item {
+                                SettingsJumpPageWidget(
+                                    title = stringResource(R.string.rezygisk_settings_title),
+                                    description = stringResource(R.string.rezygisk_settings_title),
+                                    onClick = {
+                                        navigator.push(Route.ReZygiskSettings)
                                     }
                                 )
                             }
