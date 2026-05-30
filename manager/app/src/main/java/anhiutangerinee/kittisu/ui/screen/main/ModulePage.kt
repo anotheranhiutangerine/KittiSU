@@ -101,6 +101,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
@@ -108,6 +109,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.FixedScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -125,6 +127,8 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.kyant.capsule.ContinuousRoundedRectangle
 import anhiutangerinee.kittisu.Natives
 import anhiutangerinee.kittisu.R
@@ -1281,26 +1285,42 @@ fun ModuleItem(
 
         val sizeStr = sizes[module.dirId]
 
-        Column(
-            modifier = Modifier
-                .run {
-                    if (module.hasActionScript || module.hasWebUi) {
-                        combinedClickable(
-                            onLongClick = {
-                                onModuleAddShortcut(module)
-                            },
-                            onClick = {
-                                if (module.hasWebUi) {
-                                    onClick(module)
+        Box {
+            if (!module.bannerPath.isNullOrBlank()) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(java.io.File(module.bannerPath))
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(RoundedCornerShape(16.dp))
+                        .alpha(0.18f)
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .run {
+                        if (module.hasActionScript || module.hasWebUi) {
+                            combinedClickable(
+                                onLongClick = {
+                                    onModuleAddShortcut(module)
+                                },
+                                onClick = {
+                                    if (module.hasWebUi) {
+                                        onClick(module)
+                                    }
                                 }
-                            }
-                        )
-                    } else {
-                        this
+                            )
+                        } else {
+                            this
+                        }
                     }
-                }
-                .padding(22.dp, 18.dp, 22.dp, 12.dp)
-        ) {
+                    .padding(22.dp, 18.dp, 22.dp, 12.dp)
+            ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1556,6 +1576,7 @@ fun ModuleItemPreview() {
         metamodule = true,
         actionIconPath = null,
         webUiIconPath = null,
+        bannerPath = null,
         dirId = "dirId",
         moduleUpdate = null
     )
