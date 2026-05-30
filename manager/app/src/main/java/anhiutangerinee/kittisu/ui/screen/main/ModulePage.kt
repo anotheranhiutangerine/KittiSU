@@ -1301,26 +1301,26 @@ fun ModuleItem(
                 )
             }
 
-            Column(
-                modifier = Modifier
-                    .run {
-                        if (module.hasActionScript || module.hasWebUi) {
-                            combinedClickable(
-                                onLongClick = {
-                                    onModuleAddShortcut(module)
-                                },
-                                onClick = {
-                                    if (module.hasWebUi) {
-                                        onClick(module)
-                                    }
+        Column(
+            modifier = Modifier
+                .run {
+                    if (module.hasActionScript || module.hasWebUi) {
+                        combinedClickable(
+                            onLongClick = {
+                                onModuleAddShortcut(module)
+                            },
+                            onClick = {
+                                if (module.hasWebUi) {
+                                    onClick(module)
                                 }
-                            )
-                        } else {
-                            this
-                        }
+                            }
+                        )
+                    } else {
+                        this
                     }
-                    .padding(22.dp, 18.dp, 22.dp, 12.dp)
-            ) {
+                }
+                .padding(22.dp, 18.dp, 22.dp, 12.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1553,6 +1553,7 @@ fun ModuleItem(
                     }
                 }
             }
+        }
         }
     }
 }
